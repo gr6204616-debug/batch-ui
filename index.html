@@ -63,13 +63,12 @@ var lectures = {};
 var qa = []; 
 var batchCode="CS-S3-2026";
 var view="home",sel=null,tab="lec";
-var currentUser = null; // متغير حفظ بيانات الدخول
+var currentUser = null; 
 
 var $=function(i){return document.getElementById(i)};
 var sub=function(id){return subjects.filter(function(x){return x.id===id})[0]};
 
-// جلب المواد
-fetch('http://127.0.0.1:8000/api/subjects')
+fetch('https://batch-api-oj4n.vercel.app/api/subjects')
     .then(response => response.json())
     .then(data => {
         subjects = data.map(item => ({
@@ -78,8 +77,7 @@ fetch('http://127.0.0.1:8000/api/subjects')
         render(); 
     }).catch(error => console.error("خطأ:", error));
 
-// جلب الواجبات
-fetch('http://127.0.0.1:8000/api/homeworks')
+fetch('https://batch-api-oj4n.vercel.app/api/homeworks')
     .then(response => response.json())
     .then(data => {
         hw = data.map(item => ({
@@ -101,7 +99,7 @@ function hwCard(h,showSub){
 }
 
 function tog(id) {
-    fetch('http://127.0.0.1:8000/api/homeworks/' + id + '/toggle', { method: 'POST' })
+    fetch('https://batch-api-oj4n.vercel.app/api/homeworks/' + id + '/toggle', { method: 'POST' })
     .then(response => response.json())
     .then(data => {
         if (data.status === "success") {
@@ -118,39 +116,33 @@ function tog(id) {
 
 function vote(id){qa.forEach(function(q){if(q.id===id){q.my=!q.my;q.v+=q.my?1:-1}});render()}
 
-// دالة جديدة لجلب المحاضرات الحقيقية المحفوظة في قاعدة البيانات
 function loadLectures(subjectId) {
-    fetch('http://127.0.0.1:8000/api/lectures/' + subjectId)
+    fetch('https://batch-api-oj4n.vercel.app/api/lectures/' + subjectId)
     .then(response => response.json())
     .then(data => {
-        lectures[subjectId] = data; // نحفظ البيانات كما جاءت من السيرفر (بها ID واسم ورابط)
+        lectures[subjectId] = data; 
         render(); 
     })
     .catch(error => console.error("خطأ في جلب المحاضرات:", error));
 }
 
-// تعديل دالة فتح المادة لكي تجلب المحاضرات من السيرفر فوراً
 function open_(id){
     sel=id;
     tab="lec";
-    loadLectures(id); // نأمر المتصفح بجلب الملفات قبل رسم الشاشة
+    loadLectures(id); 
     render();
 }
 
-// الدالة الهندسية الحقيقية لرفع الملفات
 function handleUpload(event) {
     var file = event.target.files[0];
     if (!file) return;
 
-    // تجهيز طرد البيانات (FormData)
     var formData = new FormData();
-    formData.append("subject_id", sel);     // كود المادة الحالية
-    formData.append("title", file.name);    // اسم الملف
-    formData.append("file", file);          // الملف الفعلي (بايتات)
+    formData.append("subject_id", sel);     
+    formData.append("title", file.name);    
+    formData.append("file", file);          
 
-    // إرسال الطلب للسيرفر
-    // ملاحظة هندسية: مع FormData لا نكتب headers، المتصفح سيتكفل بها تلقائياً
-    fetch('http://127.0.0.1:8000/api/lectures/upload', {
+    fetch('https://batch-api-oj4n.vercel.app/api/lectures/upload', {
         method: 'POST',
         body: formData 
     })
@@ -158,7 +150,7 @@ function handleUpload(event) {
     .then(data => {
         if(data.status === "success") {
             alert("تم رفع الملف بنجاح وحفظه في السيرفر!");
-            loadLectures(sel); // تحديث القائمة فوراً لتشمل الملف الجديد
+            loadLectures(sel); 
         }
     })
     .catch(error => console.error("خطأ في الرفع:", error));
@@ -166,13 +158,13 @@ function handleUpload(event) {
 
 function deleteFile(lectureId) {
     if (confirm("هل أنت متأكد من حذف هذا الملف نهائياً؟")) {
-        fetch('http://127.0.0.1:8000/api/lectures/' + lectureId, {
+        fetch('https://batch-api-oj4n.vercel.app/api/lectures/' + lectureId, {
             method: 'DELETE'
         })
         .then(response => response.json())
         .then(data => {
             if(data.status === "success") {
-                loadLectures(sel); // تحديث الشاشة بعد نجاح الحذف
+                loadLectures(sel); 
             }
         })
         .catch(error => console.error("خطأ في الحذف:", error));
@@ -195,7 +187,6 @@ function render(){
                          '<a '+clickAction+' class="grow row" style="text-decoration:none;color:inherit;gap:12px">'+
                            '<div class="dot">📄</div><div class="grow"><div class="t">'+l.title+'</div><div class="s">تم الرفع</div></div><span class="badge">'+l.file_type+'</span>'+
                          '</a>'+
-                         // هنا نرسل الـ (l.id) الحقيقي الخاص بقاعدة البيانات
                          (currentUser && currentUser.role === 'admin' ? '<button class="del-btn" onclick="deleteFile('+l.id+')" title="حذف الملف">✖</button>' : '') +
                        '</div>';
             }).join("") : '<div class="empty">لا توجد محاضرات بعد.</div>';
@@ -235,7 +226,6 @@ function render(){
         `;
     }
 
-    // هذان السطران هما ما قمت بحذفهما وأفسدا عليك الواجهة
     $("main").innerHTML = m;
     $("main").scrollTop = 0;
 }
@@ -261,7 +251,7 @@ function login() {
     .then(data => {
         if (data.status === "success") {
             currentUser = data.user; 
-            alert(data.message + "\nمرحباً: " + currentUser.name + "\nالصلاحية: " + currentUser.role);
+            alert(data.message + "\\nمرحباً: " + currentUser.name + "\\nالصلاحية: " + currentUser.role);
             go('home'); 
         } else {
             alert("فشل الدخول: " + data.detail);
