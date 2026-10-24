@@ -63,7 +63,7 @@ var lectures = {};
 var qa = []; 
 var batchCode="CS-S3-2026";
 var view="home",sel=null,tab="lec";
-var currentUser = null; 
+var currentUser = JSON.parse(localStorage.getItem('currentUser')) || null; 
 
 var $=function(i){return document.getElementById(i)};
 var sub=function(id){return subjects.filter(function(x){return x.id===id})[0]};
@@ -133,27 +133,26 @@ function open_(id){
     render();
 }
 
-function handleUpload(event) {
-    var file = event.target.files[0];
-    if (!file) return;
+function handleAddLink() {
+    var title = prompt("أدخل اسم المحاضرة (مثال: ملزمة الفصل الأول):");
+    if (!title) return;
+    
+    var url = prompt("أدخل الرابط العام للمحاضرة (من جوجل درايف أو غيره):");
+    if (!url) return;
 
-    var formData = new FormData();
-    formData.append("subject_id", sel);     
-    formData.append("title", file.name);    
-    formData.append("file", file);          
-
-    fetch('https://batch-api-oj4n.vercel.app/api/lectures/upload', {
+    fetch('https://batch-api-oj4n.vercel.app/api/lectures/add', {
         method: 'POST',
-        body: formData 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject_id: sel, title: title, file_url: url })
     })
     .then(response => response.json())
     .then(data => {
         if(data.status === "success") {
-            alert("تم رفع الملف بنجاح وحفظه في السيرفر!");
+            alert("تمت إضافة المحاضرة بنجاح!");
             loadLectures(sel); 
         }
     })
-    .catch(error => console.error("خطأ في الرفع:", error));
+    .catch(error => console.error("خطأ في الإضافة:", error));
 }
 
 function deleteFile(lectureId) {
@@ -192,9 +191,8 @@ function render(){
             }).join("") : '<div class="empty">لا توجد محاضرات بعد.</div>';
 
             if (currentUser && currentUser.role === 'admin') {
-                m += '<input type="file" id="fileInput" style="display:none" onchange="handleUpload(event)">';
-                m += '<button class="btn" style="width:100%;padding:12px;margin-top:10px" onclick="document.getElementById(\'fileInput\').click()">+ رفع ملف</button>';
-            }
+    m += '<button class="btn" style="width:100%;padding:12px;margin-top:10px" onclick="handleAddLink()">+ إضافة رابط محاضرة</button>';
+}
         }
         else if(tab==="hw"){var H=hw.filter(function(h){return h.s===sel});m=H.length?H.map(function(h){return hwCard(h,false)}).join(""):'<div class="empty">ماكو واجبات بهاي المادة.</div>'}
         else if(tab==="qa"){m=qa.map(function(q){return '<div class="card row" style="align-items:flex-start"><button class="vote '+(q.my?"on":"")+'" onclick="vote('+q.id+')"><span>▲</span><b>'+q.v+'</b></button><div class="grow"><div class="t">'+q.q+'</div>'+(q.a?'<div class="s" style="margin-top:6px">'+q.a+'</div>':'<div class="s">بانتظار جواب</div>')+(q.solved?'<div class="solved">✓ تم الحل</div>':'')+'</div></div>'}).join("")+'<button class="btn" style="width:100%;padding:12px">+ اسأل سؤال</button>'}
@@ -251,6 +249,7 @@ function login() {
     .then(data => {
         if (data.status === "success") {
             currentUser = data.user; 
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
             alert(data.message + "\\nمرحباً: " + currentUser.name + "\\nالصلاحية: " + currentUser.role);
             go('home'); 
         } else {
